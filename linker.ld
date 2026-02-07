@@ -4,6 +4,11 @@ SECTIONS
 {
     . = 1M;
 
+    .multiboot_header ALIGN(8) : AT(ADDR(.multiboot_header))
+    {
+        *(.multiboot_header)
+    }
+
     .text ALIGN(4K) : AT(ADDR(.text))
     {
         *(.text)
