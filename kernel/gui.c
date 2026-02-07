@@ -20,7 +20,7 @@ extern void graphics_draw_pixel(int x, int y, uint32_t color);
 #define COLOR_SHADOW        0x40000000 // Ombre semi-transparente
 #define COLOR_START_HOVER   0xE0E0E0  // Survol bouton démarrer
 #define COLOR_ICON_BG       0xF0F0F0  // Fond icône
-
+// Variables globales pour la taille de l'écran
 // Dimensions
 static uint32_t screen_w = 1024;
 static uint32_t screen_h = 768;
