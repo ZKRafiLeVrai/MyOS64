@@ -18,10 +18,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y nasm gcc g++ make xorriso grub-pc-bin grub-common mtools
     
-    - name: Build bootloader
-      run: |
-        nasm -f elf64 boot/boot.asm -o boot/boot.o
-    
     - name: Build kernel
       run: |
         nasm -f elf64 kernel/kernel_entry.asm -o kernel/kernel_entry.o
