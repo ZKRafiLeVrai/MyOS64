@@ -11,6 +11,9 @@ static size_t terminal_row;
 static size_t terminal_column;
 static uint8_t terminal_color;
 
+// Déclaration anticipée
+void terminal_putentryat(char c, uint8_t color, size_t x, size_t y);
+
 // Créer une entrée VGA
 static inline uint16_t vga_entry(unsigned char uc, uint8_t color) {
     return (uint16_t) uc | (uint16_t) color << 8;

@@ -8,6 +8,7 @@ extern void graphics_draw_rect_border(int x, int y, int width, int height,
                                      uint32_t fill, uint32_t border, int border_width);
 extern void graphics_draw_circle(int cx, int cy, int radius, uint32_t color);
 extern void graphics_get_screen_size(uint32_t* width, uint32_t* height);
+extern void graphics_draw_pixel(int x, int y, uint32_t color);
 
 // Couleurs Windows 11
 #define COLOR_BACKGROUND    0x202020  // Gris foncé
@@ -67,7 +68,6 @@ void gui_draw_char(int x, int y, char c, uint32_t color) {
         uint8_t row = font[(int)c][dy];
         for (int dx = 0; dx < 8; dx++) {
             if (row & (0x80 >> dx)) {
-                extern void graphics_draw_pixel(int x, int y, uint32_t color);
                 graphics_draw_pixel(x + dx, y + dy, color);
             }
         }
