@@ -45,29 +45,3 @@ _start:
 .hang:
     hlt
     jmp .hang
-```
-
-### 📝 Mettre à Jour grub.cfg
-
-Assure-toi que `grub.cfg` utilise **multiboot2** :
-```
-set timeout=5
-set default=0
-
-menuentry "MyOS64" {
-    multiboot2 /boot/myos.bin
-    boot
-}
-
-menuentry "MyOS64 (Mode texte)" {
-    multiboot2 /boot/myos.bin
-    boot
-}
-
-menuentry "Redémarrer" {
-    reboot
-}
-
-menuentry "Éteindre" {
-    halt
-}
