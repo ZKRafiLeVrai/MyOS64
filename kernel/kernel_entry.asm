@@ -1,28 +1,23 @@
-; Multiboot2 Header
 section .multiboot_header
 align 8
 header_start:
-    dd 0xe85250d6                ; magic number (multiboot2)
-    dd 0                         ; architecture 0 (protected mode i386)
-    dd header_end - header_start ; header length
-    ; checksum
+    dd 0xe85250d6
+    dd 0
+    dd header_end - header_start
     dd 0x100000000 - (0xe85250d6 + 0 + (header_end - header_start))
 
-    ; end tag
 align 8
-    dw 0    ; type
-    dw 0    ; flags
-    dd 8    ; size
+    dw 0
+    dw 0
+    dd 8
 header_end:
 
-; Section BSS pour la pile
 section .bss
 align 16
 stack_bottom:
-    resb 16384  ; 16 KB de pile
+    resb 16384
 stack_top:
 
-; Section de code
 section .text
 bits 32
 
@@ -30,17 +25,10 @@ global _start
 extern kernel_main
 
 _start:
-    ; Configurer la pile
     mov esp, stack_top
     
-    ; Sauvegarder les informations multiboot
-    ; EBX contient l'adresse de la structure multiboot
-    ; EAX contient le magic number
-    
-    ; Appeler le kernel principal
     call kernel_main
     
-    ; Si le kernel retourne, boucle infinie
     cli
 .hang:
     hlt
