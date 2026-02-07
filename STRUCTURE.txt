@@ -1,0 +1,128 @@
+MyOS64/
+│
+├── 📄 Documentation
+│   ├── START_HERE.md           ⭐ COMMENCEZ ICI
+│   ├── GITHUB_SETUP.md         📘 Guide GitHub détaillé
+│   ├── QUICKSTART.md           🚀 Démarrage rapide
+│   ├── README.md               📖 Documentation complète
+│   ├── PROJECT_INFO.md         ℹ️  Informations projet
+│   ├── SUMMARY.md              📊 Récapitulatif
+│   └── STRUCTURE.txt           📁 Ce fichier
+│
+├── 🔧 Scripts
+│   ├── push_to_github.bat      🪟 Script Windows → GitHub
+│   ├── push_to_github.sh       🐧 Script Linux/Mac → GitHub
+│   ├── build.sh                🔨 Compilation locale
+│   └── check_structure.sh      ✅ Vérification structure
+│
+├── 💾 Code Source
+│   │
+│   ├── boot/
+│   │   └── boot.asm            🥾 Bootloader 64-bit
+│   │                              • Détection 64-bit
+│   │                              • Activation A20
+│   │                              • Pagination
+│   │                              • Mode long
+│   │
+│   └── kernel/
+│       ├── kernel_entry.asm    🚪 Point d'entrée
+│       ├── kernel.c            🧠 Kernel principal
+│       │                          • Boucle principale
+│       │                          • Gestion clavier
+│       │                          • Commandes
+│       │                          • Mode switching
+│       │
+│       ├── terminal.c          💻 Mode terminal
+│       │                          • VGA text 80x25
+│       │                          • Couleurs
+│       │                          • Défilement
+│       │                          • Curseur
+│       │
+│       ├── graphics.c          🎨 Primitives graphiques
+│       │                          • Pixels
+│       │                          • Rectangles
+│       │                          • Cercles
+│       │                          • Framebuffer
+│       │
+│       └── gui.c               🖼️  Interface Windows 11
+│                                  • Barre des tâches
+│                                  • Fenêtres
+│                                  • Boutons
+│                                  • Couleurs modernes
+│
+├── ⚙️ Configuration
+│   ├── linker.ld               🔗 Script de liaison
+│   ├── grub.cfg                🥾 Config GRUB
+│   ├── Makefile                🔨 Système de build
+│   └── .gitignore              🚫 Fichiers ignorés
+│
+├── 🤖 CI/CD
+│   └── .github/
+│       └── workflows/
+│           └── build.yml       ⚡ GitHub Actions
+│                                  • Build auto
+│                                  • Artifacts
+│                                  • Releases
+│
+└── 📦 Sortie (après compilation)
+    ├── MyOS64.iso              💿 Image bootable
+    └── build/                  🏗️  Fichiers temporaires
+
+═══════════════════════════════════════════════════════
+
+📊 STATISTIQUES
+
+Fichiers sources        : 6
+Fichiers documentation  : 7
+Scripts utilitaires     : 4
+Lignes de code          : ~2000+
+Taille ISO estimée      : 5-10 MB
+
+═══════════════════════════════════════════════════════
+
+🎯 WORKFLOW DE DÉVELOPPEMENT
+
+1. Modifier le code (kernel/*.c, boot/*.asm)
+   ↓
+2. Tester localement (make && make run)
+   OU
+   Pousser sur GitHub (./push_to_github.sh)
+   ↓
+3. GitHub Actions compile automatiquement
+   ↓
+4. Télécharger l'ISO depuis Actions/Releases
+   ↓
+5. Tester avec QEMU/VirtualBox/VMware
+
+═══════════════════════════════════════════════════════
+
+🚀 DÉMARRAGE RAPIDE
+
+Windows  : Double-cliquer sur push_to_github.bat
+Linux/Mac: ./push_to_github.sh
+
+Ou manuellement :
+    git init
+    git add .
+    git commit -m "Initial commit"
+    git remote add origin https://github.com/USER/MyOS64.git
+    git push -u origin main
+
+═══════════════════════════════════════════════════════
+
+✨ FONCTIONNALITÉS
+
+Terminal :
+  • help    - Aide
+  • clear   - Effacer
+  • gui     - Mode graphique
+  • info    - Informations
+  • reboot  - Redémarrer
+
+GUI :
+  • Barre des tâches Windows 11
+  • Fenêtres avec décorations
+  • Bouton démarrer
+  • ESC pour retourner au terminal
+
+═══════════════════════════════════════════════════════
