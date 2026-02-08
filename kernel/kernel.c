@@ -10,7 +10,7 @@ void kernel_main(void) {
     }
     
     // Message de test
-    const char* message = "MyOS64 - Kernel Started!";
+   // const char* message = "MyOS64 - Kernel Started!";
     int pos = 0;
     
     while (message[pos] != '\0') {
