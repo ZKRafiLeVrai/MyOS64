@@ -2,9 +2,11 @@
 
 # Compiler and flags
 AS = nasm
-CC = x86_64-elf-gcc
-CXX = x86_64-elf-g++
-LD = x86_64-elf-ld
+# Remplace ces lignes dans ton Makefile :
+CC = gcc
+CXX = g++
+LD = ld
+# Garde le reste (CFLAGS, LDFLAGS, etc.) identique
 
 ASFLAGS = -f elf64
 CFLAGS = -m64 -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti -nostdlib -nostdinc -mno-red-zone -mcmodel=kernel
