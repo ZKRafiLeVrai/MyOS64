@@ -19,7 +19,7 @@ GRUB_DIR = $(ISO_DIR)/boot/grub
 
 # Source files
 ASM_SOURCES = $(KERNEL_DIR)/kernel_entry.asm $(KERNEL_DIR)/idt_asm.asm
-C_SOURCES = $(wildcard $(KERNEL_DIR)/*.c)
+C_SOURCES =
 CXX_SOURCES = $(KERNEL_DIR)/kernel_main.cpp \
               $(KERNEL_DIR)/idt.cpp \
               $(KERNEL_DIR)/isr.cpp \
