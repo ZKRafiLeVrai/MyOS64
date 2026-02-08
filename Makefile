@@ -9,7 +9,8 @@ LD = ld
 # Garde le reste (CFLAGS, LDFLAGS, etc.) identique
 
 ASFLAGS = -f elf64
-CFLAGS = -m64 -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti -nostdlib -nostdinc -mno-red-zone -mcmodel=kernel
+# Ajoute -fno-pic ici
+CFLAGS = -m64 -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti -nostdlib -nostdinc -mno-red-zone -mcmodel=kernel -fno-pic
 CXXFLAGS = $(CFLAGS)
 LDFLAGS = -T linker.ld -nostdlib
 
