@@ -2,11 +2,9 @@
 
 #include <stddef.h>
 
-extern "C" {
-    void kernel_main();
-    void init_pics();
-    void handle_keyboard();
-}
+extern "C" void kernel_main();
+extern "C" void init_pics();
+extern "C" void handle_keyboard();
 
 // VGA text mode constants
 
