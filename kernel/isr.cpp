@@ -72,7 +72,8 @@ extern "C" void isr_handler(Registers* regs) {
         panic(exception_messages[regs->int_no]);
     }
 }
-
+// Déclaration préalable pour que irq_handler sache que handle_keyboard existe
+extern "C" void handle_keyboard();
 // IRQ handler
 extern "C" void irq_handler(Registers* regs) {
     // Send EOI to PICs
@@ -93,14 +94,13 @@ extern "C" void irq_handler(Registers* regs) {
 }
 
 // Keyboard handler (will be implemented properly later)
-void handle_keyboard() {
+extern "C" void handle_keyboard() {
     uint8_t scancode = inb(0x60);
-    // For now, just read and discard
-    // Proper keyboard handler will be added later
+    (void)scancode; // Pour éviter le warning "unused variable"
 }
 
 // Initialize PICs
-void init_pics() {
+extern "C" void init_pics() {
     // ICW1 - begin initialization
     outb(PIC1_COMMAND, 0x11);
     outb(PIC2_COMMAND, 0x11);
