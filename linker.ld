@@ -2,7 +2,7 @@ ENTRY(_start)
 
 SECTIONS
 {
-    /* On commence à 2Mo pour laisser de la place aux headers ELF en mode UEFI */
+    /* On commence à 2 Mo pour éviter les conflits UEFI */
     . = 2M;
 
     .multiboot_header : ALIGN(4K)
