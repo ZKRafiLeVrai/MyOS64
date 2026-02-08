@@ -2,11 +2,10 @@ ENTRY(_start)
 
 SECTIONS
 {
-    /* On commence à 1Mo */
-    . = 1M;
+    /* On commence à 2Mo pour laisser de la place aux headers ELF en mode UEFI */
+    . = 2M;
 
-    /* Le header Multiboot2 DOIT être en premier pour GRUB */
-    .multiboot_header :
+    .multiboot_header : ALIGN(4K)
     {
         KEEP(*(.multiboot_header))
     }
@@ -26,13 +25,10 @@ SECTIONS
         *(.data)
     }
 
-    /* Section BSS alignée pour les tables de pages */
     .bss : ALIGN(4K)
     {
         *(COMMON)
         *(.bss)
         . = ALIGN(4K);
     }
-
-    _kernel_end = .;
 }
