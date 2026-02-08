@@ -1,12 +1,17 @@
+; --- CONSTANTES ---
+VM_MEM_VIDEO    equ 0xb8000
+MAGIC_MB2       equ 0xe85250d6
+ARCH_I386       equ 0
+
 section .multiboot_header
 align 8
 header_start:
-    dd 0xe85250d6                ; magic
-    dd 0                         ; i386
-    dd header_end - header_start ; length
-    dd 0x100000000 - (0xe85250d6 + 0 + (header_end - header_start))
+    dd MAGIC_MB2
+    dd ARCH_I386
+    dd header_end - header_start
+    dd 0x100000000 - (MAGIC_MB2 + ARCH_I386 + (header_end - header_start))
 
-    ; Tag de fin (obligatoire pour Multiboot2)
+    ; Tag de fin obligatoire
     dw 0
     dw 0
     dd 8
@@ -21,17 +26,17 @@ pdp_table:
 pd_table:
     resb 4096
 stack_bottom:
-    resb 16384
+    resb 16384 ; 16 KB de pile
 stack_top:
 
 section .data
 align 16
 gdt64:
-    dq 0 ; null descriptor
+    dq 0 ; Null Descriptor
 .code: equ $ - gdt64
-    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; code descriptor (flat 64-bit)
+    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; Code segment: Conforming, Readable, Present, 64-bit
 .data: equ $ - gdt64
-    dq (1<<41) | (1<<44) | (1<<47)           ; data descriptor
+    dq (1<<41) | (1<<44) | (1<<47)           ; Data segment: Writable, Present
 gdt64_ptr:
     dw $ - gdt64 - 1
     dq gdt64
@@ -42,60 +47,60 @@ global _start
 extern kernel_main
 
 _start:
-    cli
-    mov esp, stack_top
+    cli                         ; Désactive les interruptions
+    mov esp, stack_top          ; Initialise la pile 32 bits
 
-    ; 1. Vérification rapide (si EAX != magic, on s'arrête)
-    cmp eax, 0x36d76289
-    jne .error
+    ; --- 1. NETTOYAGE MÉMOIRE (Indispensable sur Ryzen) ---
+    ; On remplit de zéros les 3 pages de tables (12 Ko)
+    mov edi, pml4_table
+    xor eax, eax
+    mov ecx, 3072
+    rep stosd
 
-    ; 2. Configuration des tables de pages
-    ; On lie PML4 -> PDP
+    ; --- 2. CONFIGURATION DES TABLES DE PAGES ---
+    ; PML4[0] -> PDP
     mov eax, pdp_table
-    or eax, 0b11 ; present + writable
+    or eax, 0b11                ; Present + Writable
     mov [pml4_table], eax
 
-    ; On lie PDP -> PD
+    ; PDP[0] -> PD
     mov eax, pd_table
-    or eax, 0b11 ; present + writable
+    or eax, 0b11                ; Present + Writable
     mov [pdp_table], eax
 
-    ; On mappe une page de 2Mo (Huge Page)
-    ; 0x83 = Present + Writable + HugePage (bit 7)
-    mov eax, 0x83
+    ; PD[0] -> 2MB Huge Page
+    ; 0x83 = Present + Writable + PageSize (bit 7)
+    mov eax, 0x000083
     mov [pd_table], eax
 
-    ; 3. Activer PAE (Obligatoire pour le Long Mode)
+    ; --- 3. ACTIVATION DES RÉGISTRES DE CONTRÔLE ---
+    ; Charger PML4 dans CR3
+    mov eax, pml4_table
+    mov cr3, eax
+
+    ; Activer PAE (Physical Address Extension)
     mov eax, cr4
     or eax, 1 << 5
     mov cr4, eax
 
-    ; 4. Charger la PML4 dans CR3
-    mov eax, pml4_table
-    mov cr3, eax
-
-    ; 5. Activer le Long Mode dans le MSR EFER
+    ; Activer le Long Mode dans le MSR EFER
     mov ecx, 0xC0000080
     rdmsr
-    or eax, 1 << 8
+    or eax, 1 << 8              ; LME (Long Mode Enable)
     wrmsr
 
-    ; 6. Activer le Paging pour entrer officiellement en mode compatibilité
+    ; Activer la Pagination (Active le mode 64 bits de compatibilité)
     mov eax, cr0
     or eax, 1 << 31
     mov cr0, eax
 
-    ; 7. Charger la GDT 64 bits et faire le saut définitif
-    lgdt [gdt64_ptr]
-    jmp 0x08:long_mode
-
-.error:
-    mov dword [0xb8000], 0x4f524f45 ; Affiche "ER" en rouge sur l'écran si erreur
-    hlt
+    ; --- 4. PASSAGE DÉFINITIF EN 64 BITS ---
+    lgdt [gdt64_ptr]            ; Charge la GDT 64 bits
+    jmp 0x08:long_mode_start    ; Saut lointain pour vider le pipeline 32 bits
 
 bits 64
-long_mode:
-    ; Charger les registres de segments avec le sélecteur de données (0x10)
+long_mode_start:
+    ; Nettoyage des registres de segments
     mov ax, 0x10
     mov ds, ax
     mov es, ax
@@ -103,5 +108,10 @@ long_mode:
     mov gs, ax
     mov ss, ax
 
+    ; Appel du kernel C/C++
     call kernel_main
+
+    ; Si le kernel quitte, on bloque le CPU
+.halt:
     hlt
+    jmp .halt
