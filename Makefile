@@ -1,113 +1,78 @@
-# Makefile pour MyOS64
+# MyOS64 Makefile
 
-# Compilateurs et outils
-ASM = nasm
-CC = gcc
-LD = ld
-GRUB_MKRESCUE = grub-mkrescue
+# Compiler and flags
+AS = nasm
+CC = x86_64-elf-gcc
+CXX = x86_64-elf-g++
+LD = x86_64-elf-ld
 
-# Flags
-ASMFLAGS = -f elf64
-CFLAGS = -m64 -ffreestanding -nostdlib -fno-pie -fno-stack-protector -mno-red-zone
-LDFLAGS = -m elf_x86_64 -T linker.ld -nostdlib
+ASFLAGS = -f elf64
+CFLAGS = -m64 -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti -nostdlib -nostdinc -mno-red-zone -mcmodel=kernel
+CXXFLAGS = $(CFLAGS)
+LDFLAGS = -T linker.ld -nostdlib
 
-# Répertoires
-BOOT_DIR = boot
-KERNEL_DIR = kernel
+# Directories
 BUILD_DIR = build
-ISO_DIR = iso
+KERNEL_DIR = kernel
+ISO_DIR = $(BUILD_DIR)/iso
+GRUB_DIR = $(ISO_DIR)/boot/grub
 
-# Fichiers sources
-BOOT_SRC = $(BOOT_DIR)/boot.asm
-KERNEL_ENTRY_SRC = $(KERNEL_DIR)/kernel_entry.asm
-KERNEL_SRCS = $(KERNEL_DIR)/kernel.c $(KERNEL_DIR)/terminal.c $(KERNEL_DIR)/graphics.c $(KERNEL_DIR)/gui.c
+# Source files
+ASM_SOURCES = $(KERNEL_DIR)/kernel_entry.asm $(KERNEL_DIR)/idt_asm.asm
+C_SOURCES = $(wildcard $(KERNEL_DIR)/*.c)
+CXX_SOURCES = $(KERNEL_DIR)/kernel_main.cpp \
+              $(KERNEL_DIR)/idt.cpp \
+              $(KERNEL_DIR)/isr.cpp \
+              $(KERNEL_DIR)/keyboard.cpp
 
-# Fichiers objets
-BOOT_OBJ = $(BUILD_DIR)/boot.o
-KERNEL_ENTRY_OBJ = $(BUILD_DIR)/kernel_entry.o
-KERNEL_OBJS = $(BUILD_DIR)/kernel.o $(BUILD_DIR)/terminal.o $(BUILD_DIR)/graphics.o $(BUILD_DIR)/gui.o
+# Object files
+ASM_OBJECTS = $(patsubst $(KERNEL_DIR)/%.asm, $(BUILD_DIR)/%.o, $(ASM_SOURCES))
+C_OBJECTS = $(patsubst $(KERNEL_DIR)/%.c, $(BUILD_DIR)/%.o, $(C_SOURCES))
+CXX_OBJECTS = $(patsubst $(KERNEL_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(CXX_SOURCES))
 
-# Fichier binaire final
-KERNEL_BIN = myos.bin
-ISO_FILE = MyOS64.iso
+OBJECTS = $(ASM_OBJECTS) $(C_OBJECTS) $(CXX_OBJECTS)
 
-# Couleurs pour les messages
-GREEN = \033[0;32m
-YELLOW = \033[0;33m
-BLUE = \033[0;34m
-NC = \033[0m # No Color
+# Output
+KERNEL = $(BUILD_DIR)/kernel.bin
+ISO = $(BUILD_DIR)/myos.iso
 
-.PHONY: all clean run iso dirs
+.PHONY: all clean iso run
 
-all: dirs $(ISO_FILE)
-	@echo "$(GREEN)✓ Build terminé avec succès!$(NC)"
-	@echo "$(YELLOW)Utilisez 'make run' pour tester avec QEMU$(NC)"
+all: $(ISO)
 
-dirs:
-	@mkdir -p $(BUILD_DIR)
-	@mkdir -p $(ISO_DIR)/boot/grub
+# Create directories
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
-# Compiler le bootloader
-$(BOOT_OBJ): $(BOOT_SRC)
-	@echo "$(BLUE)Compilation du bootloader...$(NC)"
-	$(ASM) $(ASMFLAGS) $< -o $@
+$(ISO_DIR):
+	mkdir -p $(ISO_DIR)/boot/grub
 
-# Compiler le point d'entrée du kernel
-$(KERNEL_ENTRY_OBJ): $(KERNEL_ENTRY_SRC)
-	@echo "$(BLUE)Compilation du kernel entry...$(NC)"
-	$(ASM) $(ASMFLAGS) $< -o $@
+# Compile assembly files
+$(BUILD_DIR)/%.o: $(KERNEL_DIR)/%.asm | $(BUILD_DIR)
+	$(AS) $(ASFLAGS) $< -o $@
 
-# Compiler les fichiers C du kernel
-$(BUILD_DIR)/%.o: $(KERNEL_DIR)/%.c
-	@echo "$(BLUE)Compilation de $<...$(NC)"
+# Compile C files
+$(BUILD_DIR)/%.o: $(KERNEL_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Lier tous les objets
-$(KERNEL_BIN): $(KERNEL_ENTRY_OBJ) $(KERNEL_OBJS)
-	@echo "$(BLUE)Liaison du kernel...$(NC)"
-	$(LD) $(LDFLAGS) -o $@ $^
-	@echo "$(GREEN)✓ Kernel créé$(NC)"
+# Compile C++ files
+$(BUILD_DIR)/%.o: $(KERNEL_DIR)/%.cpp | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Créer l'ISO bootable avec GRUB
-$(ISO_FILE): $(KERNEL_BIN)
-	@echo "$(BLUE)Création de l'ISO bootable...$(NC)"
-	cp $(KERNEL_BIN) $(ISO_DIR)/boot/
-	cp grub.cfg $(ISO_DIR)/boot/grub/
-	$(GRUB_MKRESCUE) -o $(ISO_FILE) $(ISO_DIR)/ 2>/dev/null || $(GRUB_MKRESCUE) -o $(ISO_FILE) $(ISO_DIR)/
-	@echo "$(GREEN)✓ ISO créé: $(ISO_FILE)$(NC)"
+# Link kernel
+$(KERNEL): $(OBJECTS) linker.ld | $(BUILD_DIR)
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS)
 
-# Tester avec QEMU
-run: $(ISO_FILE)
-	@echo "$(YELLOW)Démarrage de QEMU...$(NC)"
-	qemu-system-x86_64 -cdrom $(ISO_FILE) -m 512M
+# Create ISO
+$(ISO): $(KERNEL) grub.cfg | $(ISO_DIR)
+	cp $(KERNEL) $(ISO_DIR)/boot/kernel.bin
+	cp grub.cfg $(GRUB_DIR)/grub.cfg
+	grub-mkrescue -o $(ISO) $(ISO_DIR)
 
-# Tester avec QEMU en mode debug
-debug: $(ISO_FILE)
-	@echo "$(YELLOW)Démarrage de QEMU en mode debug...$(NC)"
-	qemu-system-x86_64 -cdrom $(ISO_FILE) -m 512M -s -S
-
-# Nettoyer les fichiers de build
+# Clean build files
 clean:
-	@echo "$(YELLOW)Nettoyage...$(NC)"
 	rm -rf $(BUILD_DIR)
-	rm -rf $(ISO_DIR)
-	rm -f $(KERNEL_BIN)
-	rm -f $(ISO_FILE)
-	@echo "$(GREEN)✓ Nettoyage terminé$(NC)"
 
-# Afficher les informations
-info:
-	@echo "$(BLUE)=== MyOS64 Build System ===$(NC)"
-	@echo "Bootloader: $(BOOT_SRC)"
-	@echo "Kernel sources: $(KERNEL_SRCS)"
-	@echo "Output: $(KERNEL_BIN) -> $(ISO_FILE)"
-	@echo ""
-	@echo "$(YELLOW)Commandes disponibles:$(NC)"
-	@echo "  make         - Compiler l'OS"
-	@echo "  make run     - Compiler et exécuter avec QEMU"
-	@echo "  make debug   - Compiler et exécuter en mode debug"
-	@echo "  make clean   - Nettoyer les fichiers de build"
-	@echo "  make info    - Afficher ces informations"
-
-# Aide
-help: info
+# Run in QEMU (optional)
+run: $(ISO)
+	qemu-system-x86_64 -cdrom $(ISO) -m 512M
