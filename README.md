@@ -1,139 +1,144 @@
-# MyOS64 - Système d'exploitation 64-bit
+# MyOS64 - Enhanced Version with GUI and Keyboard Support
 
-## Description
+## 🎉 Nouvelles fonctionnalités
 
-MyOS64 est un système d'exploitation 64-bit avec :
-- **Bootloader GRUB** pour le démarrage
-- **Mode terminal** avec ligne de commande interactive
-- **Mode graphique** avec interface style Windows 11
-- **Architecture x86-64** complète
+### Interface utilisateur
+- **GUI moderne** avec boîtes colorées
+- **Barre de titre** avec nom du système
+- **Barre de statut** en bas de l'écran
+- **Codes couleur** pour différentes sections
+- **Affichage scrollable** pour le texte
 
-## Fonctionnalités
+### Gestion des interruptions
+- **IDT (Interrupt Descriptor Table)** complètement implémentée
+- **32 exceptions CPU** gérées (Division by Zero, Page Fault, etc.)
+- **16 IRQs** gérés (Timer, Keyboard, etc.)
+- **Handlers en assembleur** optimisés pour 64-bit
+- **PICs reprogrammés** correctement
 
-### Mode Terminal
-- Ligne de commande interactive
-- Commandes disponibles :
-  - `help` - Afficher l'aide
-  - `clear` - Effacer l'écran
-  - `gui` - Passer en mode graphique
-  - `info` - Informations système
-  - `reboot` - Redémarrer le système
+### Support du clavier
+- **Driver clavier complet** avec buffer circulaire
+- **Support QWERTY US** complet
+- **Touches spéciales** : Shift, Ctrl, Alt, Caps Lock
+- **Backspace** fonctionnel
+- **Entrée de commandes** interactive
 
-### Mode Graphique
-- Interface utilisateur style Windows 11
-- Barre des tâches avec bouton démarrer
-- Fenêtres avec bordures arrondies
-- Système de couleurs moderne
-- Appuyez sur ESC pour retourner au terminal
+### Commandes disponibles
+- `help` - Affiche l'aide
+- `clear` - Efface l'écran
+- `info` - Informations système
+- `hello` - Message de test
 
-## Compilation
+## 📁 Installation
 
-### Sur Linux
+### 1. Remplacer les fichiers dans votre dépôt
 
-```bash
-# Installer les dépendances
-sudo apt-get install nasm gcc make xorriso grub-pc-bin grub-common mtools
-
-# Compiler
-make
-```
-
-### Sur GitHub Actions
-
-Le projet se compile automatiquement via GitHub Actions :
-1. Poussez votre code sur GitHub
-2. GitHub Actions compilera automatiquement l'OS
-3. Un fichier ISO sera créé en tant qu'artifact
-4. L'ISO sera également attaché aux releases
-
-## Structure du projet
+Copiez **tous** ces fichiers dans votre dépôt MyOS64 :
 
 ```
-MyOS64/
-├── .github/
-│   └── workflows/
-│       └── build.yml          # Configuration GitHub Actions
-├── boot/
-│   └── boot.asm               # Bootloader 64-bit
-├── kernel/
-│   ├── kernel_entry.asm       # Point d'entrée du kernel
-│   ├── kernel.c               # Kernel principal
-│   ├── terminal.c             # Mode terminal VGA
-│   ├── graphics.c             # Routines graphiques
-│   └── gui.c                  # Interface graphique
-├── linker.ld                  # Script de liaison
-├── grub.cfg                   # Configuration GRUB
-├── Makefile                   # Script de compilation
-└── README.md                  # Ce fichier
+kernel/
+├── kernel_entry.asm    (déjà présent - ne pas toucher)
+├── kernel_main.cpp     (REMPLACER)
+├── idt.h               (NOUVEAU)
+├── idt.cpp             (NOUVEAU)
+├── idt_asm.asm         (NOUVEAU)
+├── isr.cpp             (NOUVEAU)
+├── keyboard.h          (NOUVEAU)
+└── keyboard.cpp        (NOUVEAU)
+
+Makefile                (REMPLACER)
 ```
 
-## Tester l'OS
+### 2. Commands PowerShell
 
-### Avec QEMU
+```powershell
+cd C:\Users\raf\Downloads\myos
 
-```bash
-qemu-system-x86_64 -cdrom MyOS64.iso -m 512M
+# Copier les nouveaux fichiers (depuis votre dossier de téléchargement)
+# Assurez-vous que tous les fichiers sont dans le bon dossier !
+
+# Ajouter tous les nouveaux fichiers
+git add kernel/kernel_main.cpp
+git add kernel/idt.h
+git add kernel/idt.cpp
+git add kernel/idt_asm.asm
+git add kernel/isr.cpp
+git add kernel/keyboard.h
+git add kernel/keyboard.cpp
+git add Makefile
+
+# Commit
+git commit -m "feat: Add complete GUI, interrupts, and keyboard support"
+
+# Push
+git push origin main
 ```
 
-### Avec VirtualBox
+### 3. Attendez le build GitHub Actions
 
-1. Créer une nouvelle VM 64-bit
-2. Monter MyOS64.iso comme CD-ROM
-3. Démarrer la VM
+Allez sur https://github.com/ZKRafiLeVrai/MyOS64/actions et attendez que le build soit vert ✅
 
-### Avec VMware
+### 4. Téléchargez et testez
 
-1. Créer une nouvelle VM 64-bit
-2. Utiliser MyOS64.iso comme image de démarrage
-3. Démarrer la VM
+- Téléchargez le nouvel ISO
+- Chargez-le dans VirtualBox
+- Démarrez la VM
 
-## Architecture
+## 🎮 Utilisation
 
-### Bootloader (boot.asm)
-- Détection du support 64-bit
-- Activation de la ligne A20
-- Configuration de la pagination
-- Passage en mode long (64-bit)
+Au démarrage, vous verrez :
+1. **Barre de titre bleue** avec "MyOS64"
+2. **Boîte de bienvenue** avec le statut du système
+3. **Boîte d'informations système**
+4. **Invite de commande** prête à recevoir vos commandes
+5. **Barre de statut** en bas
 
-### Kernel (kernel.c)
-- Gestion du terminal
-- Gestion du clavier
-- Commandes système
-- Basculement terminal ↔ GUI
+Tapez une commande et appuyez sur Entrée !
 
-### Terminal (terminal.c)
-- Mode texte VGA 80x25
-- Support du défilement
-- Gestion des couleurs
-- Support backspace, tab, etc.
+## 🔧 Architecture technique
 
-### Graphics (graphics.c)
-- Dessin de pixels
-- Rectangles et cercles
-- Gestion du framebuffer
-- Primitives graphiques
+### Mode Long (64-bit)
+- ✅ Transition 32→64 bits fonctionnelle
+- ✅ GDT 64-bit correctement configurée
+- ✅ Paging avec huge pages (2MB)
+- ✅ PAE activé
 
-### GUI (gui.c)
-- Interface Windows 11
-- Barre des tâches
-- Fenêtres avec décorations
-- Système de couleurs moderne
+### Interruptions
+- ✅ IDT avec 256 entrées
+- ✅ ISR handlers 0-31 (exceptions)
+- ✅ IRQ handlers 32-47 (matériel)
+- ✅ PICs reprogrammés et configurés
 
-## Développement futur
+### Clavier
+- ✅ Buffer circulaire 256 caractères
+- ✅ Support complet touches modificatrices
+- ✅ Layout QWERTY US
+- ✅ Gestion IRQ1 (keyboard)
 
-- [ ] Système de fichiers (FAT32)
-- [ ] Gestionnaire de mémoire avancé
-- [ ] Multi-threading
-- [ ] Pilotes de périphériques
-- [ ] Support réseau
-- [ ] Applications utilisateur
-- [ ] Shell amélioré
-- [ ] Support USB
+### Affichage
+- ✅ VGA Text Mode 80x25
+- ✅ 16 couleurs supportées
+- ✅ Scrolling automatique
+- ✅ Terminal class orienté objet
 
-## Licence
+## 🐛 Debugging
 
-Projet éducatif open-source.
+Si vous obtenez un Guru Meditation :
+1. Vérifiez que **tous les fichiers** ont bien été copiés
+2. Vérifiez que le **Makefile** a été mis à jour
+3. Regardez les **logs VirtualBox** pour voir l'erreur exacte
+4. Vérifiez que GitHub Actions a bien **compilé avec succès**
 
-## Auteur
+## 📝 Prochaines étapes possibles
 
-Créé comme démonstration d'un OS 64-bit moderne.
+- [ ] Filesystem (FAT32 ou custom)
+- [ ] Multitasking (scheduler)
+- [ ] Memory management (heap, malloc)
+- [ ] VGA graphics mode
+- [ ] Network stack
+- [ ] User mode / Ring 3
+- [ ] System calls
+
+## 👨‍💻 Auteur
+
+Développé avec ❤️ pour apprendre le développement d'OS
