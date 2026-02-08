@@ -16,32 +16,20 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y nasm gcc g++ make xorriso grub-pc-bin grub-common mtools
-    
-    - name: Build kernel
+        sudo apt-get install -p nasm gcc g++ make xorriso grub-pc-bin grub-common mtools
+
+    - name: Build ISO using Makefile
       run: |
-        nasm -f elf64 kernel/kernel_entry.asm -o kernel/kernel_entry.o
-        gcc -m64 -ffreestanding -c kernel/kernel.c -o kernel/kernel.o -nostdlib -fno-pie
-        gcc -m64 -ffreestanding -c kernel/graphics.c -o kernel/graphics.o -nostdlib -fno-pie
-        gcc -m64 -ffreestanding -c kernel/terminal.c -o kernel/terminal.o -nostdlib -fno-pie
-        gcc -m64 -ffreestanding -c kernel/gui.c -o kernel/gui.o -nostdlib -fno-pie
-        
-    - name: Link kernel
-      run: |
-        ld -m elf_x86_64 -T linker.ld -o myos.bin kernel/kernel_entry.o kernel/kernel.o kernel/graphics.o kernel/terminal.o kernel/gui.o -nostdlib
-    
-    - name: Create ISO with GRUB
-      run: |
-        mkdir -p iso/boot/grub
-        cp myos.bin iso/boot/
-        cp grub.cfg iso/boot/grub/
-        grub-mkrescue -o MyOS64.iso iso/
-    
+        # On utilise le Makefile que nous avons corrigé ensemble
+        # Cela compile les .asm et les .cpp (idt, keyboard, kernel_main, etc.)
+        make clean
+        make
+
     - name: Upload ISO artifact
       uses: actions/upload-artifact@v4
       with:
         name: MyOS64-ISO
-        path: MyOS64.iso
+        path: build/myos.iso
         
     - name: Create Release
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -49,6 +37,6 @@ jobs:
       with:
         tag_name: v${{ github.run_number }}
         name: Release v${{ github.run_number }}
-        files: MyOS64.iso
+        files: build/myos.iso
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
