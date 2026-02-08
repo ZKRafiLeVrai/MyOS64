@@ -27,7 +27,7 @@ CXX_SOURCES = $(KERNEL_DIR)/kernel_main.cpp \
 
 # Object files
 ASM_OBJECTS = $(patsubst $(KERNEL_DIR)/%.asm, $(BUILD_DIR)/%.o, $(ASM_SOURCES))
-C_OBJECTS = $(patsubst $(KERNEL_DIR)/%.c, $(BUILD_DIR)/%.o, $(C_SOURCES))
+C_OBJECTS = 
 CXX_OBJECTS = $(patsubst $(KERNEL_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(CXX_SOURCES))
 
 OBJECTS = $(ASM_OBJECTS) $(C_OBJECTS) $(CXX_OBJECTS)
