@@ -8,7 +8,7 @@ extern "C" {
 }
 namespace VGA {
 
-    constexpr uint16_t* BUFFER = reinterpret_cast<uint16_t*>(0xB8000);
+    static uint16_t* BUFFER = reinterpret_cast<uint16_t*>(0xB8000);
 
     constexpr size_t WIDTH = 80;
 
@@ -76,7 +76,7 @@ namespace VGA {
 
 class Terminal {
 
-private:
+public:
 
     size_t row;
 
@@ -86,7 +86,6 @@ private:
 
    
 
-public:
 
     Terminal() : row(0), column(0), color(VGA::make_color(VGA::WHITE, VGA::BLACK)) {}
 
