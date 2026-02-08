@@ -1,13 +1,7 @@
 #include <stdint.h>
 
 #include <stddef.h>
-extern "C" void kernel_main() {
-    // Affiche un 'X' blanc sur fond bleu en haut à gauche
-    unsigned short* vga = (unsigned short*)0xB8000;
-    vga[0] = 0x1F58; 
 
-    while(1) { __asm__("hlt"); }
-}
 extern "C" {
     void kernel_main();
     void init_pics();
