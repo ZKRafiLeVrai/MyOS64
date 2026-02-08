@@ -16,12 +16,11 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -p nasm gcc g++ make xorriso grub-pc-bin grub-common mtools
+        # Correction ici : -y à la place de -p
+        sudo apt-get install -y nasm gcc g++ make xorriso grub-pc-bin grub-common mtools
 
     - name: Build ISO using Makefile
       run: |
-        # On utilise le Makefile que nous avons corrigé ensemble
-        # Cela compile les .asm et les .cpp (idt, keyboard, kernel_main, etc.)
         make clean
         make
 
