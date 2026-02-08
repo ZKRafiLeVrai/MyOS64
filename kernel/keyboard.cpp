@@ -1,5 +1,6 @@
 #include "keyboard.h"
-
+#include <stddef.h>  // Ajoute ça pour size_t
+#include <stdint.h>  // Ajoute ça pour uint8_t, uint16_t
 namespace Keyboard {
     // Keyboard buffer
     constexpr size_t BUFFER_SIZE = 256;
