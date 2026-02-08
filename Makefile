@@ -2,17 +2,21 @@
 
 # Compiler and flags
 AS = nasm
-# Remplace ces lignes dans ton Makefile :
 CC = gcc
 CXX = g++
 LD = ld
-# Garde le reste (CFLAGS, LDFLAGS, etc.) identique
+
+# Récupération automatique du chemin des headers internes du compilateur
+INTERNAL_INCLUDES := -I$(shell $(CXX) -print-file-name=include)
 
 ASFLAGS = -f elf64
-# Ajoute -fno-pic ici
-CFLAGS = -m64 -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti -nostdlib -nostdinc -mno-red-zone -mcmodel=kernel -fno-pic
+# Ajout de -fno-pic et des INTERNAL_INCLUDES
+CFLAGS = -m64 -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti \
+         -nostdlib -nostdinc -mno-red-zone -mcmodel=kernel -fno-pic \
+         $(INTERNAL_INCLUDES)
+
 CXXFLAGS = $(CFLAGS)
-LDFLAGS = -T linker.ld -nostdlib
+LDFLAGS = -T linker.ld -nostdlib -z noexecstack
 
 # Directories
 BUILD_DIR = build
@@ -41,35 +45,28 @@ ISO = $(BUILD_DIR)/myos.iso
 
 all: $(ISO)
 
-# Create directories
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(ISO_DIR):
 	mkdir -p $(ISO_DIR)/boot/grub
 
-# Compile assembly files
 $(BUILD_DIR)/%.o: $(KERNEL_DIR)/%.asm | $(BUILD_DIR)
 	$(AS) $(ASFLAGS) $< -o $@
 
-# Compile C++ files
 $(BUILD_DIR)/%.o: $(KERNEL_DIR)/%.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Link kernel
 $(KERNEL): $(OBJECTS) linker.ld | $(BUILD_DIR)
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS)
 
-# Create ISO
 $(ISO): $(KERNEL) grub.cfg | $(ISO_DIR)
 	cp $(KERNEL) $(ISO_DIR)/boot/kernel.bin
 	cp grub.cfg $(GRUB_DIR)/grub.cfg
 	grub-mkrescue -o $(ISO) $(ISO_DIR)
 
-# Clean build files
 clean:
 	rm -rf $(BUILD_DIR)
 
-# Run in QEMU
 run: $(ISO)
 	qemu-system-x86_64 -cdrom $(ISO) -m 512M

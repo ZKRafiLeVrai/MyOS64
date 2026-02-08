@@ -2,13 +2,9 @@
 
 #include <stddef.h>
 extern "C" {
-// VGA text mode constants
-void kernel_main() {
-        // ... ton code ...
-    }
-    
-    void init_pics() { /* ... */ }
-    void handle_keyboard() { /* ... */ }
+    void kernel_main();
+    void init_pics();
+    void handle_keyboard();
 }
 namespace VGA {
 
@@ -756,5 +752,4 @@ extern "C" void kernel_main() {
 
     }
 
-}
 }
