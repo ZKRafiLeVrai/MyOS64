@@ -94,10 +94,7 @@ extern "C" void irq_handler(Registers* regs) {
 }
 
 // Keyboard handler (will be implemented properly later)
-extern "C" void handle_keyboard() {
-    uint8_t scancode = inb(0x60);
-    (void)scancode; // Pour éviter le warning "unused variable"
-}
+
 
 // Initialize PICs
 extern "C" void init_pics() {
