@@ -5,7 +5,7 @@ SECTIONS
     /* On commence à 1Mo */
     . = 1M;
 
-    /* Le header Multiboot DOIT être en premier */
+    /* Le header Multiboot2 DOIT être en premier pour GRUB */
     .multiboot_header :
     {
         KEEP(*(.multiboot_header))
@@ -26,6 +26,7 @@ SECTIONS
         *(.data)
     }
 
+    /* Section BSS alignée pour les tables de pages */
     .bss : ALIGN(4K)
     {
         *(COMMON)
