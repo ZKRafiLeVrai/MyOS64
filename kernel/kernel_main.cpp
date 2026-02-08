@@ -2,12 +2,14 @@
 
 #include <stddef.h>
 extern "C" {
-
-    void kernel_main();
-
-}
 // VGA text mode constants
-
+void kernel_main() {
+        // ... ton code ...
+    }
+    
+    void init_pics() { /* ... */ }
+    void handle_keyboard() { /* ... */ }
+}
 namespace VGA {
 
     constexpr uint16_t* BUFFER = reinterpret_cast<uint16_t*>(0xB8000);
@@ -754,4 +756,5 @@ extern "C" void kernel_main() {
 
     }
 
+}
 }
