@@ -16,8 +16,7 @@ CFLAGS = -m64 -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti \
 CXXFLAGS = $(CFLAGS)
 
 # Linker flags : -n (NMAGIC) et alignement des pages à 4Ko
-LDFLAGS = -T linker.ld -nostdlib -z noexecstack -n -z max-page-size=0x1000
-
+LDFLAGS = -T linker.ld -nostdlib -n -z max-page-size=0x1000
 # Dossiers et Fichiers
 BUILD_DIR = build
 KERNEL_DIR = kernel
