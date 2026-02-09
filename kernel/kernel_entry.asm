@@ -1,50 +1,48 @@
 bits 32
 
 section .multiboot_header
-align 4096                       ; Alignement page-size pour UEFI
+align 8
 header_start:
-    dd 0xe85250d6                ; Magic
-    dd 0                         ; i386
-    dd header_end - header_start 
+    dd 0xe85250d6
+    dd 0
+    dd header_end - header_start
     dd 0x100000000 - (0xe85250d6 + 0 + (header_end - header_start))
-
-    ; Tag d'alignement requis pour certains chargeurs UEFI
-    dw 6, 0
-    dd 8
-
-    ; Tag de fin
-    dw 0, 0
-    dd 8
+    dw 0, 0, 8
 header_end:
 
-section .text
+; --- SECTION BSS FORCÉE ET ALIGNÉE ---
+section .bss
 align 4096
+pml4_table: resb 4096
+pdp_table:  resb 4096
+pd_table:   resb 4096
+align 16
+stack_bottom: resb 16384
+stack_top:
+
+section .text
 global _start
 extern kernel_main
 
 _start:
     cli
-    ; Initialisation pile 32 bits
     mov esp, stack_top
 
-    ; --- RAZ TOTAL DES TABLES DE PAGES ---
-    ; On nettoie 4 pages (PML4, PDP, PD, et une marge)
+    ; Nettoyage des tables (Crucial pour BIOS)
     mov edi, pml4_table
     xor eax, eax
-    mov ecx, 4096               ; 4096 * 4 / 4
+    mov ecx, 3072
     rep stosd
 
-    ; --- SETUP PAGINATION ---
+    ; Setup PML4 -> PDP -> PD
     mov eax, pdp_table
-    or eax, 0b11                ; Present + Writable
+    or eax, 0b11
     mov [pml4_table], eax
-
     mov eax, pd_table
-    or eax, 0b11                ; Present + Writable
+    or eax, 0b11
     mov [pdp_table], eax
 
-    ; Mapping 1 Go (Huge Pages 2Mo)
-    ; Note: On utilise 0x83 (Present + Writable + Huge)
+    ; Mapping 1 Go avec Huge Pages
     mov ecx, 0
 .map_pd:
     mov eax, 0x200000
@@ -55,64 +53,48 @@ _start:
     cmp ecx, 512
     jne .map_pd
 
-    ; --- PASSAGE LONG MODE ---
+    ; Passage en Long Mode
     mov eax, pml4_table
     mov cr3, eax
-
     mov eax, cr4
-    or eax, 1 << 5              ; PAE
+    or eax, 1 << 5    ; PAE
     mov cr4, eax
 
-    mov ecx, 0xC0000080         ; EFER MSR
+    mov ecx, 0xC0000080
     rdmsr
-    or eax, 1 << 8              ; LME
+    or eax, 1 << 8    ; LME
     wrmsr
 
     mov eax, cr0
-    or eax, 1 << 31             ; Paging
+    or eax, 1 << 31   ; Paging
     mov cr0, eax
 
     lgdt [gdt64_ptr]
-    
-    ; Saut far jump 64 bits
     jmp 0x08:long_mode_entry
 
 bits 64
 long_mode_entry:
-    ; Reset des segments pour le mode 64 bits
     mov ax, 0x10
     mov ds, ax
     mov es, ax
-    mov fs, ax
-    mov gs, ax
     mov ss, ax
-
-    ; Alignement de la pile pour l'ABI x86_64
     mov rsp, stack_top
     
+    ; Supprime ou commente init_idt() dans ton C++ pour le premier test !
     call kernel_main
 
 .halt:
     hlt
     jmp .halt
 
-section .bss
-align 4096
-pml4_table: resb 4096
-pdp_table:  resb 4096
-pd_table:   resb 4096
-align 16
-stack_bottom: resb 16384
-stack_top:
-
 section .data
 align 16
 gdt64:
-    dq 0 ; null
+    dq 0
 .code: equ $ - gdt64
-    dq (1<<43) | (1<<44) | (1<<47) | (1<<53) ; Code
+    dq (1<<43) | (1<<44) | (1<<47) | (1<<53)
 .data: equ $ - gdt64
-    dq (1<<41) | (1<<44) | (1<<47)           ; Data
+    dq (1<<41) | (1<<44) | (1<<47)
 gdt64_ptr:
     dw $ - gdt64 - 1
     dq gdt64
