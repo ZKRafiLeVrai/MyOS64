@@ -1,21 +1,7 @@
 #include <stdint.h>
 
 #include <stddef.h>
-extern "C" void kernel_main() {
-    // 0xB8000 est l'adresse du mode texte. 
-    // On va tenter de remplir l'écran de VERT pour confirmer que ça marche.
-    volatile unsigned short* vga = (volatile unsigned short*)0xB8000;
-    
-    for (int i = 0; i < 80 * 25; i++) {
-        vga[i] = 0x2F20; // 0x2F = Fond Vert, 0x20 = Espace
-    }
 
-    // Si tu arrives ici, l'écran devrait devenir vert.
-    // Si c'est toujours noir, c'est que l'UEFI a bloqué le mode texte.
-    while(1) {
-        __asm__ volatile("hlt");
-    }
-}
 extern "C" {
     void init_pics();
     void handle_keyboard();
@@ -683,19 +669,19 @@ extern "C" void kernel_main() {
 
     // Initialize PICs
 
-    init_pics();
+    //init_pics();
 
    
 
     // Initialize IDT and enable interrupts
 
-    IDT::initialize();
+    //IDT::initialize();
 
    
 
     // Initialize keyboard
 
-    Keyboard::initialize();
+    //Keyboard::initialize();
 
    
 
