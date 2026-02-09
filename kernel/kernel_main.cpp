@@ -660,7 +660,8 @@ void process_command() {
 // Kernel entry point
 
 extern "C" void kernel_main() {
-
+// Cela fait flasher une bordure ou un pixel si le matériel le permet
+outb(0x3D4, 0x0E); // Juste pour envoyer un signal au contrôleur VGA
     // Initialize and draw GUI
 
     draw_gui();
