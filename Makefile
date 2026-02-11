@@ -9,8 +9,9 @@ INTERNAL_INCLUDES := -I$(shell $(CXX) -print-file-name=include)
 # Flags
 ASFLAGS = -f elf64
 # -fno-stack-protector est CRITIQUE ici
+# Change cette ligne dans ton Makefile
 CFLAGS = -m64 -ffreestanding -O2 -Wall -Wextra -fno-exceptions -fno-rtti \
-         -nostdlib -nostdinc -mno-red-zone -mcmodel=kernel -fno-pic \
+         -nostdlib -nostdinc -mno-red-zone -mcmodel=small -fno-pic \
          -fno-stack-protector $(INTERNAL_INCLUDES)
 
 CXXFLAGS = $(CFLAGS)
