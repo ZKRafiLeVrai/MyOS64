@@ -86,7 +86,7 @@ long_mode_entry:
 .halt:
     hlt
     jmp .halt
-
+;sss
 section .data
 align 16
 gdt64:
