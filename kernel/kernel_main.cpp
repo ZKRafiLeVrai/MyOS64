@@ -3,34 +3,19 @@
 #include "idt.h"
 #include "keyboard.h"
 
-// --- 1. BLOC DE LIAISON C (Pour ISR.CPP et IDT.CPP) ---
+// --- 1. LIAISON AVEC LES AUTRES FICHIERS ---
 extern "C" {
     void init_pics();
-    
-    // Définition de handle_keyboard demandée par le linker
+    // On force panic en "C" pour que isr.cpp (le handler d'interruption) le trouve
+    void panic(const char* message);
     void handle_keyboard() {
         Keyboard::handle_interrupt();
     }
-
-    // Définition de panic demandée par isr.cpp
-    // On ajoute 'const' pour matcher exactement la signature attendue
-    void panic(const char* message) {
-        (void)message; // Évite le warning unused parameter
-        
-        // On dessine un écran rouge de la mort
-        uint32_t* fb = reinterpret_cast<uint32_t*>(0xFD000000);
-        for (int i = 0; i < 1024 * 768; i++) {
-            fb[i] = 0x00FF0000; 
-        }
-        
-        while (1) { 
-            __asm__ volatile("hlt"); 
-        }
-    }
 }
 
-// --- 2. NAMESPACE GRAPHICS ---
+// --- 2. NOUVEAU SYSTÈME GRAPHIQUE (UEFI) ---
 namespace Graphics {
+    // Adresse Framebuffer UEFI VirtualBox (1024x768)
     uint32_t* FRAMEBUFFER = reinterpret_cast<uint32_t*>(0xFD000000);
     const int WIDTH = 1024;
     const int HEIGHT = 768;
@@ -52,20 +37,27 @@ namespace Graphics {
     }
 }
 
-// --- 3. POINT D'ENTRÉE DU NOYAU ---
-extern "C" void kernel_main() {
-    // Affiche l'interface immédiatement
-    Graphics::clear_screen(0x003366FF); // Bleu
-    Graphics::draw_rect(0, 0, 1024, 40, 0x00222222);     // Barre de titre
-    Graphics::draw_rect(200, 150, 600, 400, 0x00CCCCCC); // Fenêtre grise
+// --- 3. DÉFINITION DE PANIC (Pour corriger l'erreur LD) ---
+extern "C" void panic(const char* message) {
+    (void)message;
+    Graphics::clear_screen(0x00FF0000); // Écran rouge si crash
+    while (1) { __asm__ volatile("hlt"); }
+}
 
-    // Initialise le matériel
+// --- 4. POINT D'ENTRÉE PRINCIPAL ---
+extern "C" void kernel_main() {
+    // A. Initialisation Vidéo UEFI
+    Graphics::clear_screen(0x003366FF); // Fond Bleu MyOS
+    Graphics::draw_rect(0, 0, 1024, 40, 0x00222222);     // Barre de titre
+    Graphics::draw_rect(212, 184, 600, 400, 0x00CCCCCC); // Fenêtre centrale
+
+    // B. Initialisation Système
     init_pics();
     IDT::initialize();
     Keyboard::initialize();
 
-    // Boucle infinie
+    // C. Boucle de vie (Ton ancien code de clavier peut être remis ici)
     while (1) {
-        __asm__ volatile("hlt");
+        asm volatile("hlt");
     }
 }
