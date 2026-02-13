@@ -1,12 +1,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// On regroupe les fonctions qui doivent être visibles par l'assembleur ou d'autres fichiers C
+// On déclare les fonctions externes en extern "C" pour éviter le "name mangling" du C++
 extern "C" {
     void init_pics();
     void handle_keyboard();
-    // RÉPARATION : On ajoute panic ici pour corriger l'erreur de lien (undefined reference)
-    void panic(const char* message); 
+    // CRUCIAL : Déclarer panic ici en extern "C" pour que isr.o puisse le voir !
+    void panic(const char* message);
 }
 
 namespace VGA {
@@ -98,12 +98,14 @@ Terminal terminal;
 #include "idt.h"
 #include "keyboard.h"
 
-// Implémentation de panic avec extern "C"
+// Implémentation de panic (le extern "C" est aussi ici)
 extern "C" void panic(const char* message) {
     terminal.set_color(VGA::WHITE, VGA::RED);
     terminal.clear();
-    terminal.write("KERNEL PANIC: ");
+    terminal.write_line("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    terminal.write("  KERNEL PANIC: ");
     terminal.write_line(message);
+    terminal.write_line("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     terminal.write_line("\nSystem Halted.");
     asm volatile("cli");
     while (1) { asm volatile("hlt"); }
@@ -131,26 +133,32 @@ static size_t command_pos = 0;
 extern "C" void kernel_main() {
     draw_gui();
 
-    // RÉACTIVATION DES SYSTÈMES (Indispensable pour le clavier)
-    init_pics();
-    IDT::initialize();
-    Keyboard::initialize();
+    // RÉACTIVATION DES SYSTÈMES CRITIQUES
+    init_pics();          // Initialise le contrôleur d'interruptions
+    IDT::initialize();    // Charge la table des interruptions
+    Keyboard::initialize(); // Prépare le clavier
 
     terminal.row = 20;
-    terminal.column = 7;
+    terminal.column = 7; // Place le curseur après le "> "
 
     while (1) {
         if (Keyboard::has_key()) {
             char c = Keyboard::get_char();
+            
             if (c == '\n') {
                 terminal.write_line("");
+                // Ici tu peux appeler process_command() si tu veux
                 terminal.write_at(5, 20, "> ", VGA::make_color(VGA::YELLOW, VGA::BLACK));
+                terminal.column = 7;
                 command_pos = 0;
-            } else {
-                if (command_pos < 255) {
-                    command_buffer[command_pos++] = c;
-                    terminal.putchar(c);
-                }
+            } else if (c == '\b' && command_pos > 0) {
+                command_pos--;
+                terminal.column--;
+                terminal.putchar(' ');
+                terminal.column--;
+            } else if (command_pos < 255 && c >= 32) {
+                command_buffer[command_pos++] = c;
+                terminal.putchar(c);
             }
         }
         asm volatile("hlt");
