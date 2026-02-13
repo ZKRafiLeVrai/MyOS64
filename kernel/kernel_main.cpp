@@ -3,10 +3,12 @@
 #include "idt.h"
 #include "keyboard.h"
 
-// Déclarations externes pour le linker
-extern "C" void init_pics();
-extern "C" void handle_keyboard() {
-    Keyboard::handle_interrupt();
+// --- 1. Déclarations C pour le Linker ---
+// On met tout dans un bloc extern "C" pour être certain que les noms sont propres
+extern "C" {
+    void init_pics();
+    void panic(const char* message);
+    void handle_keyboard();
 }
 
 namespace Graphics {
@@ -32,25 +34,35 @@ namespace Graphics {
     }
 }
 
-// Fonction Panic requise par isr.cpp
-extern "C" void panic(const char* message) {
-    Graphics::clear_screen(0x00FF0000); // Écran rouge
-    while (1) { asm volatile("hlt"); }
+// --- 2. Définitions des fonctions C ---
+
+extern "C" void handle_keyboard() {
+    Keyboard::handle_interrupt();
 }
 
+extern "C" void panic(const char* message) {
+    (void)message; // Empêche le warning unused parameter
+    Graphics::clear_screen(0x00FF0000); // Écran rouge "BSOD"
+    while (1) { 
+        __asm__ volatile("hlt"); 
+    }
+}
+
+// --- 3. Point d'entrée ---
+
 extern "C" void kernel_main() {
-    // 1. Affichage de base UEFI
+    // 1. Affichage immédiat (pour confirmer que le noyau respire)
     Graphics::clear_screen(0x003366FF); // Fond bleu
     Graphics::draw_rect(200, 150, 600, 400, 0x00CCCCCC); // Fenêtre grise
     Graphics::draw_rect(0, 0, 1024, 40, 0x00222222);     // Barre de titre
 
-    // 2. Initialisation du système (Keyboard/IDT)
+    // 2. Initialisation du matériel
     init_pics();
     IDT::initialize();
     Keyboard::initialize();
 
-    // Boucle principale
+    // 3. Boucle d'attente
     while (1) {
-        asm volatile("hlt");
+        __asm__ volatile("hlt");
     }
 }
