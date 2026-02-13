@@ -1,100 +1,157 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "idt.h"
-#include "keyboard.h"
 
-// --- LIAISON C POUR LE LINKER (Répare l'erreur isr.cpp) ---
+// On regroupe les fonctions qui doivent être visibles par l'assembleur ou d'autres fichiers C
 extern "C" {
     void init_pics();
-    void handle_keyboard() { Keyboard::handle_interrupt(); }
-    
-    // Répare l'erreur "undefined reference to panic"
-    void panic(const char* message) {
-        // En cas de panic, on remplit l'écran de rouge (UEFI)
-        uint32_t* fb = reinterpret_cast<uint32_t*>(0xFD000000);
-        for (int i = 0; i < 1024 * 768; i++) fb[i] = 0x00FF0000;
-        while (1) { __asm__ volatile("hlt"); }
+    void handle_keyboard();
+    // RÉPARATION : On ajoute panic ici pour corriger l'erreur de lien (undefined reference)
+    void panic(const char* message); 
+}
+
+namespace VGA {
+    static uint16_t* BUFFER = reinterpret_cast<uint16_t*>(0xB8000);
+    constexpr size_t WIDTH = 80;
+    constexpr size_t HEIGHT = 25;
+
+    enum Color : uint8_t {
+        BLACK = 0, BLUE = 1, GREEN = 2, CYAN = 3, RED = 4, MAGENTA = 5, BROWN = 6, LIGHT_GREY = 7,
+        DARK_GREY = 8, LIGHT_BLUE = 9, LIGHT_GREEN = 10, LIGHT_CYAN = 11, LIGHT_RED = 12, 
+        LIGHT_MAGENTA = 13, YELLOW = 14, WHITE = 15
+    };
+
+    inline uint8_t make_color(Color fg, Color bg) { return fg | (bg << 4); }
+    inline uint16_t make_entry(char c, uint8_t color) {
+        return static_cast<uint16_t>(c) | (static_cast<uint16_t>(color) << 8);
     }
 }
 
-namespace Graphics {
-    // Adresse Framebuffer UEFI VirtualBox
-    uint32_t* FRAMEBUFFER = reinterpret_cast<uint32_t*>(0xFD000000);
-    const int WIDTH = 1024;
-    const int HEIGHT = 768;
-
-    // Simulation du mode texte en UEFI (Dessin de pixels)
-    void put_pixel(int x, int y, uint32_t color) {
-        if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
-            FRAMEBUFFER[y * WIDTH + x] = color;
-    }
-
-    // Dessine un bloc pour simuler un caractère (en attendant une vraie police)
-    void draw_char_box(int col, int row, uint32_t color) {
-        int x = col * 9;  // Largeur d'un caractère simulé
-        int y = row * 16; // Hauteur d'un caractère simulé
-        for(int j=0; j<14; j++)
-            for(int i=0; i<7; i++)
-                put_pixel(x+i, y+j, color);
-    }
-}
-
-// Ta classe Terminal originale, adaptée pour écrire des pixels
 class Terminal {
 public:
     size_t row;
     size_t column;
-    uint32_t current_color;
+    uint8_t color;
 
-    Terminal() : row(0), column(0), current_color(0x00FFFFFF) {}
+    Terminal() : row(0), column(0), color(VGA::make_color(VGA::WHITE, VGA::BLACK)) {}
+
+    void set_color(VGA::Color fg, VGA::Color bg) { color = VGA::make_color(fg, bg); }
 
     void clear() {
-        for (int i = 0; i < 1024 * 768; i++) Graphics::FRAMEBUFFER[i] = 0;
+        for (size_t y = 0; y < VGA::HEIGHT; y++) {
+            for (size_t x = 0; x < VGA::WIDTH; x++) {
+                VGA::BUFFER[y * VGA::WIDTH + x] = VGA::make_entry(' ', color);
+            }
+        }
         row = 0; column = 0;
     }
 
+    void scroll() {
+        for (size_t y = 0; y < VGA::HEIGHT - 1; y++) {
+            for (size_t x = 0; x < VGA::WIDTH; x++) {
+                VGA::BUFFER[y * VGA::WIDTH + x] = VGA::BUFFER[(y + 1) * VGA::WIDTH + x];
+            }
+        }
+        for (size_t x = 0; x < VGA::WIDTH; x++) {
+            VGA::BUFFER[(VGA::HEIGHT - 1) * VGA::WIDTH + x] = VGA::make_entry(' ', color);
+        }
+        row = VGA::HEIGHT - 1;
+    }
+
     void putchar(char c) {
-        if (c == '\n') { column = 0; row++; return; }
-        // On dessine un petit rectangle pour chaque lettre
-        Graphics::draw_char_box(column, row, current_color);
-        if (++column > 80) { column = 0; row++; }
+        if (c == '\n') {
+            column = 0;
+            if (++row == VGA::HEIGHT) scroll();
+            return;
+        }
+        const size_t index = row * VGA::WIDTH + column;
+        VGA::BUFFER[index] = VGA::make_entry(c, color);
+        if (++column == VGA::WIDTH) {
+            column = 0;
+            if (++row == VGA::HEIGHT) scroll();
+        }
     }
 
     void write(const char* str) { while (*str) putchar(*str++); }
-    
-    void write_at(size_t x, size_t y, const char* str, uint32_t color) {
-        column = x; row = y; current_color = color;
+    void write_line(const char* str) { write(str); putchar('\n'); }
+
+    void write_at(size_t x, size_t y, const char* str, uint8_t custom_color) {
+        size_t old_row = row; size_t old_col = column; uint8_t old_color = color;
+        row = y; column = x; color = custom_color;
         write(str);
+        row = old_row; column = old_col; color = old_color;
+    }
+
+    void draw_box(size_t x, size_t y, size_t width, size_t height, uint8_t box_color) {
+        for (size_t i = 0; i < width; i++) {
+            VGA::BUFFER[y * VGA::WIDTH + x + i] = VGA::make_entry('-', box_color);
+            VGA::BUFFER[(y + height - 1) * VGA::WIDTH + x + i] = VGA::make_entry('-', box_color);
+        }
+        for (size_t i = 0; i < height; i++) {
+            VGA::BUFFER[(y + i) * VGA::WIDTH + x] = VGA::make_entry('|', box_color);
+            VGA::BUFFER[(y + i) * VGA::WIDTH + x + width - 1] = VGA::make_entry('|', box_color);
+        }
     }
 };
 
 Terminal terminal;
 
-// Tes fonctions de GUI originales
-void draw_gui() {
+#include "idt.h"
+#include "keyboard.h"
+
+// Implémentation de panic avec extern "C"
+extern "C" void panic(const char* message) {
+    terminal.set_color(VGA::WHITE, VGA::RED);
     terminal.clear();
-    // On simule ton GUI avec des couleurs UEFI (Bleu: 0x000000FF, Jaune: 0x00FFFF00)
-    terminal.write_at(20, 0, "MyOS64 - UEFI GRAPHIC MODE ACTIVE", 0x00FFFF00);
-    
-    // On dessine tes boites originales en pixels
-    for(int i=0; i<1024; i++) Graphics::FRAMEBUFFER[40 * 1024 + i] = 0x00FFFFFF; // Ligne de séparation
+    terminal.write("KERNEL PANIC: ");
+    terminal.write_line(message);
+    terminal.write_line("\nSystem Halted.");
+    asm volatile("cli");
+    while (1) { asm volatile("hlt"); }
 }
 
-// Ton point d'entrée original
+extern "C" void handle_keyboard() {
+    Keyboard::handle_interrupt();
+}
+
+void draw_gui() {
+    terminal.clear();
+    terminal.set_color(VGA::WHITE, VGA::BLUE);
+    for (size_t i = 0; i < VGA::WIDTH; i++) terminal.putchar(' ');
+    terminal.write_at(20, 0, "MyOS64 - 64-bit Operating System v0.1", VGA::make_color(VGA::YELLOW, VGA::BLUE));
+    
+    terminal.draw_box(2, 2, 76, 8, VGA::make_color(VGA::CYAN, VGA::BLACK));
+    terminal.write_at(5, 3, "Welcome to MyOS64!", VGA::make_color(VGA::LIGHT_GREEN, VGA::BLACK));
+    terminal.write_at(5, 19, "Command Prompt:", VGA::make_color(VGA::LIGHT_GREEN, VGA::BLACK));
+    terminal.write_at(5, 20, "> ", VGA::make_color(VGA::YELLOW, VGA::BLACK));
+}
+
+static char command_buffer[256];
+static size_t command_pos = 0;
+
 extern "C" void kernel_main() {
     draw_gui();
 
-    // Initialisation
+    // RÉACTIVATION DES SYSTÈMES (Indispensable pour le clavier)
     init_pics();
     IDT::initialize();
     Keyboard::initialize();
 
-    terminal.write_at(2, 20, "> ", 0x0000FF00);
+    terminal.row = 20;
+    terminal.column = 7;
 
     while (1) {
         if (Keyboard::has_key()) {
             char c = Keyboard::get_char();
-            terminal.putchar(c);
+            if (c == '\n') {
+                terminal.write_line("");
+                terminal.write_at(5, 20, "> ", VGA::make_color(VGA::YELLOW, VGA::BLACK));
+                command_pos = 0;
+            } else {
+                if (command_pos < 255) {
+                    command_buffer[command_pos++] = c;
+                    terminal.putchar(c);
+                }
+            }
         }
         asm volatile("hlt");
     }
